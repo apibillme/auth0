@@ -20,6 +20,10 @@ import (
 func validateToken(url string, jwtToken string) (*jwt.Token, error) {
 	// get JWKs and validate them against JWT token
 	set, err := jwk.Fetch(url)
+	if err != nil {
+		return nil, err
+	}
+
 	matches := 0
 	for _, key := range set.Keys {
 		_, err = jws.VerifyWithJWK([]byte(jwtToken), key)
