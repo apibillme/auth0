@@ -132,8 +132,8 @@ func processToken(db *buntdb.DB, jwtToken string, audience string, url string) (
 	return token, nil
 }
 
-// ValidateAuth0 - validate with JWK & JWT Auth0 & audience for fasthttp
-func ValidateAuth0(db *buntdb.DB, url string, audience string, req *fasthttp.RequestCtx) (*jwt.Token, error) {
+// Validate - validate with JWK & JWT Auth0 & audience for fasthttp
+func Validate(db *buntdb.DB, url string, audience string, req *fasthttp.RequestCtx) (*jwt.Token, error) {
 	// extract token from header
 	jwtToken, err := getJwtToken(req)
 	if err != nil {
@@ -143,8 +143,8 @@ func ValidateAuth0(db *buntdb.DB, url string, audience string, req *fasthttp.Req
 	return processToken(db, jwtToken, audience, url)
 }
 
-// ValidateAuth0Net - validate with JWK & JWT Auth0 & audience for net/http
-func ValidateAuth0Net(db *buntdb.DB, url string, audience string, req *http.Request) (*jwt.Token, error) {
+// ValidateNet - validate with JWK & JWT Auth0 & audience for net/http
+func ValidateNet(db *buntdb.DB, url string, audience string, req *http.Request) (*jwt.Token, error) {
 	// extract token from header
 	jwtToken, err := getJwtTokenNet(req)
 	if err != nil {
