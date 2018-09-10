@@ -15,8 +15,6 @@ go get github.com/apibillme/auth0-middleware
 
 ## Example
 
-Check out [gorestserve](https://github.com/apibillme/gorestserve)
-
 ```go
 func main() {
     db, err := buntdb.Open(":memory:")
@@ -45,6 +43,7 @@ func main() {
     })
 }
 ```
+Check out [gorestserve](https://github.com/apibillme/gorestserve)
 
 ## TODO
 * Tests (waiting for my version of VCR)
