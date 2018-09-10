@@ -1,6 +1,6 @@
-# auth0-middleware for net/http and fasthttp
+# Auth0 authentication for net/http and fasthttp
 
-[![Go Report](https://goreportcard.com/badge/github.com/apibillme/auth0-middleware)](https://goreportcard.com/report/github.com/apibillme/auth0-middleware) [![GolangCI](https://golangci.com/badges/github.com/apibillme/auth0-middleware.svg)](https://golangci.com/r/github.com/apibillme/auth0-middleware) [![Travis](https://travis-ci.org/apibillme/auth0-middleware.svg?branch=master)](https://travis-ci.org/apibillme/auth0-middleware#) [![codecov](https://codecov.io/gh/apibillme/auth0-middleware/branch/master/graph/badge.svg)](https://codecov.io/gh/apibillme/auth0-middleware) ![License](https://img.shields.io/github/license/mashape/apistatus.svg) ![Maintenance](https://img.shields.io/maintenance/yes/2018.svg) [![GoDoc](https://godoc.org/github.com/apibillme/auth0-middleware?status.svg)](https://godoc.org/github.com/apibillme/auth0-middleware)
+[![Go Report](https://goreportcard.com/badge/github.com/apibillme/auth0)](https://goreportcard.com/report/github.com/apibillme/auth0) [![GolangCI](https://golangci.com/badges/github.com/apibillme/auth0.svg)](https://golangci.com/r/github.com/apibillme/auth0) [![Travis](https://travis-ci.org/apibillme/auth0.svg?branch=master)](https://travis-ci.org/apibillme/auth0#) [![codecov](https://codecov.io/gh/apibillme/auth0/branch/master/graph/badge.svg)](https://codecov.io/gh/apibillme/auth0) ![License](https://img.shields.io/github/license/mashape/apistatus.svg) ![Maintenance](https://img.shields.io/maintenance/yes/2018.svg) [![GoDoc](https://godoc.org/github.com/apibillme/auth0?status.svg)](https://godoc.org/github.com/apibillme/auth0)
 
 
 ## Features:
