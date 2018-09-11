@@ -15,6 +15,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwt"
 
 	"github.com/tidwall/buntdb"
+	"github.com/tidwall/gjson"
 )
 
 // reference vars here for stubbing
@@ -131,6 +132,21 @@ func processToken(db *buntdb.DB, jwtToken string, audience string, url string) (
 
 	// if everything is good return token
 	return token, nil
+}
+
+// GetScopes - get the scopes of the token
+func GetScopes(token *jwt.Token) ([]string, error) {
+	jsonBytes, err := token.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	result := gjson.ParseBytes(jsonBytes)
+	scopesStr := result.Get("scope").String()
+	if scopesStr == "" {
+		return nil, errors.New("there are no scopes")
+	}
+	scopes := strings.Split(scopesStr, " ")
+	return scopes, nil
 }
 
 // Validate - validate with JWK & JWT Auth0 & audience for fasthttp

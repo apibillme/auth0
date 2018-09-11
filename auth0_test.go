@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwk"
+	jwxt "github.com/lestrrat-go/jwx/jwt"
 
 	"github.com/spf13/cast"
 
@@ -288,6 +289,25 @@ func TestSpec(t *testing.T) {
 	})
 
 	Convey("Unit Tests", t, func() {
+
+		Convey("GetScopes - Success", func() {
+			jwtToken := `eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6Ik1FTTNNRFEzTkRBME56RkJRME13TkVJNVFVSTVPVVkyTWpNNFJEWTRSamRDUXpKR1JrTTFOQSJ9.eyJpc3MiOiJodHRwczovL2JldmFuaHVudC5hdXRoMC5jb20vIiwic3ViIjoiZ2l0aHVifDg5MjQwNCIsImF1ZCI6WyJodHRwczovL2h0dHBiaW4ub3JnLyIsImh0dHBzOi8vYmV2YW5odW50LmF1dGgwLmNvbS91c2VyaW5mbyJdLCJpYXQiOjE1MzY2NjI4MjAsImV4cCI6MTUzNjY3MDAyMCwiYXpwIjoiWFZBSThLdWk4OW5KNE1yUnBTOExiZmJuenhnT0lLUjQiLCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIGdldDpnZXQifQ.un8WKaw9cshRHEXIlVzk4HO1BSBwoWKv_sFkS_N4youb7rX7t54WcH3zSSjuAGbIW9u8fbjhPBLRK4PF44xf-X9j3Xc0f7GRXztET7zWpQ6see9KUeRICFp0t5kppnj3E_lZZucr6c8El3IJT8wiojh3027zCEzMfIQhpDO81hF1rMbSmz188pUDXp6HlL84HvIF8OjIjDXj0H3MLBR51G4n_aKPzxI8qDGR5-xyABAmlLnbHb1xjXNwEh3tsiOREiJjGw7jx5IeHSOOvInTlBMzQ7XvTHDPYWLpRfGCJBva0lNJ_BqYbdBUd044a2GBoOuCqKnfzFPV664fg-5R-w`
+			token, err := jwxt.ParseString(jwtToken)
+			So(err, ShouldBeNil)
+			scopes, err := GetScopes(token)
+			So(err, ShouldBeNil)
+			scopesExp := []string{"openid", "profile", "email", "get:get"}
+			So(scopes, ShouldResemble, scopesExp)
+		})
+
+		Convey("GetScopes - Failure - valid token no scopes", func() {
+			jwtToken := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.TCYt5XsITJX1CxPCT8yAV-TVkIEq_PbChOMqsLfRoPsnsgw5WEuts01mq-pQy7UJiN5mgRxD-WUcX16dUEMGlv50aqzpqh4Qktb3rk-BuQy72IFLOqV0G_zS245-kronKb78cPN25DGlcTwLtjPAYuNzVBAh4vGHSrQyHUdBBPM`
+			token, err := jwxt.ParseString(jwtToken)
+			So(err, ShouldBeNil)
+			_, err = GetScopes(token)
+			So(err, ShouldBeError)
+		})
+
 		Convey("verifyToken - failure: jwt is invalid", func() {
 			_, err := verifyToken("123")
 			So(err, ShouldBeError)
