@@ -6,7 +6,7 @@
 ## Features:
 * Full authentication for Auth0 - or with any JWKs endpoint
 * Works with [net/http](https://golang.org/pkg/net/http/) and [fasthttp](https://github.com/valyala/fasthttp)
-* About 150 LOC
+* About 200 LOC
 * In-memory key (token) caching with [BuntDB](https://github.com/tidwall/buntdb) - note: no key eviction due to the possibility of expired keys hammering your server
 
 ```bash

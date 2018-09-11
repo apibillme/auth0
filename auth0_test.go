@@ -32,15 +32,16 @@ func TestSpec(t *testing.T) {
 
 		Convey("Success - fresh key on first request - fasthttp", func() {
 			// set vars
-			jwkEndpoint := "https://example.com/"
+			jwkEndpoint := "https://example.auth0.com/jwks.json"
 			audience := "https://httpbin.org/"
+			issuer := "https://example.auth0.com/"
 
 			// Timestamp the beginning.
 			now := time.Now()
 			// Define a signer.
 			hs256 := jwt.NewHS256("secret")
 			jot := &jwt.JWT{
-				Issuer:         "https://example.auth0.com/",
+				Issuer:         issuer,
 				Subject:        "user@email.com",
 				Audience:       audience,
 				ExpirationTime: now.Add(24 * 30 * 12 * time.Hour).Unix(),
@@ -72,7 +73,7 @@ func TestSpec(t *testing.T) {
 			defer stub2.Reset()
 
 			// validate token
-			tokenDone, err := Validate(db, jwkEndpoint, audience, ctx)
+			tokenDone, err := Validate(db, jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeNil)
 			So(tokenDone, ShouldResemble, token)
 
@@ -87,22 +88,23 @@ func TestSpec(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			// validate again to test key caching
-			tokenDone, err = Validate(db, jwkEndpoint, audience, ctx)
+			tokenDone, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeNil)
 			So(tokenDone, ShouldResemble, token)
 		})
 
 		Convey("Success - fresh key on first request - net/http", func() {
 			// set vars
-			jwkEndpoint := "https://example.com/"
+			jwkEndpoint := "https://example.auth0.com/jwks.json"
 			audience := "https://httpbin.org/"
+			issuer := "https://example.auth0.com/"
 
 			// Timestamp the beginning.
 			now := time.Now()
 			// Define a signer.
 			hs256 := jwt.NewHS256("secret")
 			jot := &jwt.JWT{
-				Issuer:         "https://example.auth0.com/",
+				Issuer:         issuer,
 				Subject:        "user@email.com",
 				Audience:       audience,
 				ExpirationTime: now.Add(24 * 30 * 12 * time.Hour).Unix(),
@@ -135,36 +137,38 @@ func TestSpec(t *testing.T) {
 			defer stub2.Reset()
 
 			// validate token
-			tokenDone, err := ValidateNet(db, jwkEndpoint, audience, ctx)
+			tokenDone, err := ValidateNet(db, jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeNil)
 			So(tokenDone, ShouldResemble, token)
 		})
 
 		Convey("Failure - bad Bearer token - net/http", func() {
 			// set vars
-			jwkEndpoint := "https://example.com/"
+			jwkEndpoint := "https://example.auth0.com/jwks.json"
 			audience := "https://httpbin.org/"
+			issuer := ""
 
 			ctx, err := http.NewRequest("GET", "http://example.com", nil)
 			So(err, ShouldBeNil)
 			ctx.Header.Add("Authorization", "Bearer")
 
 			// validate token
-			_, err = ValidateNet(db, jwkEndpoint, audience, ctx)
+			_, err = ValidateNet(db, jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 		})
 
 		Convey("Failure - expired key provided on first request", func() {
 			// set vars
-			jwkEndpoint := "https://example.com/"
+			jwkEndpoint := "https://example.auth0.com/jwks.json"
 			audience := "https://httpbin.org/"
+			issuer := "https://example.auth0.com/"
 
 			// Timestamp the beginning.
 			now := time.Now()
 			// Define a signer.
 			hs256 := jwt.NewHS256("secret")
 			jot := &jwt.JWT{
-				Issuer:         "https://example.auth0.com/",
+				Issuer:         issuer,
 				Subject:        "user@email.com",
 				Audience:       audience,
 				ExpirationTime: now.Add(time.Duration(-10) * time.Minute).Unix(),
@@ -192,7 +196,7 @@ func TestSpec(t *testing.T) {
 			stub2 := stubby.StubFunc(&jwsVerifyWithJWK, nil, nil)
 			defer stub2.Reset()
 
-			_, err = Validate(db, jwkEndpoint, audience, ctx)
+			_, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 
 			// check db for saved token
@@ -208,15 +212,16 @@ func TestSpec(t *testing.T) {
 
 		Convey("Failure - audience does not match", func() {
 			// set vars
-			jwkEndpoint := "https://example.com/"
+			jwkEndpoint := "https://example.auth0.com/jwks.json"
 			audience := "https://httpbin.org/"
+			issuer := "https://example.auth0.com/"
 
 			// Timestamp the beginning.
 			now := time.Now()
 			// Define a signer.
 			hs256 := jwt.NewHS256("secret")
 			jot := &jwt.JWT{
-				Issuer:         "https://example.auth0.com/",
+				Issuer:         issuer,
 				Subject:        "user@email.com",
 				Audience:       "foobar",
 				ExpirationTime: now.Add(24 * 30 * 12 * time.Hour).Unix(),
@@ -245,64 +250,146 @@ func TestSpec(t *testing.T) {
 			defer stub2.Reset()
 
 			// validate token
-			_, err = Validate(db, jwkEndpoint, audience, ctx)
+			_, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
+			So(err, ShouldBeError)
+		})
+
+		Convey("Failure - issuer does not match", func() {
+			// set vars
+			jwkEndpoint := "https://example.auth0.com/jwks.json"
+			audience := "https://httpbin.org/"
+			issuer := "https://example.auth0.com/"
+
+			// Timestamp the beginning.
+			now := time.Now()
+			// Define a signer.
+			hs256 := jwt.NewHS256("secret")
+			jot := &jwt.JWT{
+				Issuer:         "foobar",
+				Subject:        "user@email.com",
+				Audience:       audience,
+				ExpirationTime: now.Add(24 * 30 * 12 * time.Hour).Unix(),
+				NotBefore:      now.Add(time.Duration(-10) * time.Minute).Unix(),
+				IssuedAt:       now.Unix(),
+			}
+			jot.SetAlgorithm(hs256)
+			jot.SetKeyID("QkZBNjE4MzI3MTQwMEZCNDg0RjIyMDgyMDBFMTZFRUIwOEE5NTAxNg")
+
+			payload, err := jwt.Marshal(jot)
+			So(err, ShouldBeNil)
+
+			tokenBytes, err := hs256.Sign(payload)
+			So(err, ShouldBeNil)
+			jwtToken := cast.ToString(tokenBytes)
+
+			ctx := &fasthttp.RequestCtx{}
+			ctx.Request.Header.Add("Authorization", "Bearer "+jwtToken)
+
+			// stub out needed functions with success factors
+			set, err := jwk.ParseString(jwks)
+			So(err, ShouldBeNil)
+			stub1 := stubby.StubFunc(&jwkFetch, set, nil)
+			defer stub1.Reset()
+			stub2 := stubby.StubFunc(&jwsVerifyWithJWK, nil, nil)
+			defer stub2.Reset()
+
+			// validate token
+			_, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 		})
 
 		Convey("Failure - Bearer token not defined", func() {
 			// set vars
-			jwkEndpoint := "https://example.com/"
+			jwkEndpoint := "https://example.auth0.com/jwks.json"
 			audience := "https://httpbin.org/"
+			issuer := ""
 
 			ctx := &fasthttp.RequestCtx{}
 			ctx.Request.Header.Add("Authorization", "Bearer")
 
 			// validate token
-			_, err = Validate(db, jwkEndpoint, audience, ctx)
+			_, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 		})
 
 		Convey("Failure - Bearer not defined", func() {
 			// set vars
-			jwkEndpoint := "https://example.com/"
+			jwkEndpoint := "https://example.auth0.com/jwks.json"
 			audience := "https://httpbin.org/"
+			issuer := "https://example.auth0.com/"
 
 			ctx := &fasthttp.RequestCtx{}
 			ctx.Request.Header.Add("Authorization", "Foobar 123")
 
 			// validate token
-			_, err = Validate(db, jwkEndpoint, audience, ctx)
+			_, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 		})
 
 		Convey("Failure - Authorization Header not defined", func() {
 			// set vars
-			jwkEndpoint := "https://example.com/"
+			jwkEndpoint := "https://example.auth0.com/jwks.json"
 			audience := "https://httpbin.org/"
+			issuer := "https://example.auth0.com/"
 
 			ctx := &fasthttp.RequestCtx{}
 
 			// validate token
-			_, err = Validate(db, jwkEndpoint, audience, ctx)
+			_, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 		})
 	})
 
 	Convey("Unit Tests", t, func() {
 
+		jwtTokenFull := `eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6Ik1FTTNNRFEzTkRBME56RkJRME13TkVJNVFVSTVPVVkyTWpNNFJEWTRSamRDUXpKR1JrTTFOQSJ9.eyJodHRwczovL2h0dHBiaW4ub3JnL2VtYWlsIjoiYmV2YW5AYmV2YW5odW50LmNvbSIsImlzcyI6Imh0dHBzOi8vYmV2YW5odW50LmF1dGgwLmNvbS8iLCJzdWIiOiJnaXRodWJ8ODkyNDA0IiwiYXVkIjpbImh0dHBzOi8vaHR0cGJpbi5vcmcvIiwiaHR0cHM6Ly9iZXZhbmh1bnQuYXV0aDAuY29tL3VzZXJpbmZvIl0sImlhdCI6MTUzNjY5NjQ3MCwiZXhwIjoxNTM2NzAzNjcwLCJhenAiOiJYVkFJOEt1aTg5bko0TXJScFM4TGJmYm56eGdPSUtSNCIsInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwgZ2V0OmdldCBnZXQ6dXNlcnMifQ.LLqJwOf5dzKyotzyZAkhXwRe_WAAg2D8mqAoRjRXKaJm1AcBgInyN-8zqVAULGXw5qJ2XvqF4VUaBFzdoo3rxobjp_XbsFwa7o3cSvup-RKmbNr7bsCCtgHUILzYenugNHrszgvUNyrDtDZjtwINhLTVrnK6R1CXWKzWB3E0uH2W7Lwcl0G2nFYltYZU8BHJFje0a_x3mn2CIgcqIhjgKdP4KZZZhuu2SrIzqATHkt9SksQu8t4uIKtFzT-fl5gHHBRNwN-p0xotpHO-4Zqt901U6DNF-XmGXbprXWeiBt9PydC7XQ36txy9poLlrFdGkBMh_Cm6LQplK7WxFCLDMg`
+		jwtTokenNoScopes := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.TCYt5XsITJX1CxPCT8yAV-TVkIEq_PbChOMqsLfRoPsnsgw5WEuts01mq-pQy7UJiN5mgRxD-WUcX16dUEMGlv50aqzpqh4Qktb3rk-BuQy72IFLOqV0G_zS245-kronKb78cPN25DGlcTwLtjPAYuNzVBAh4vGHSrQyHUdBBPM`
+
+		Convey("GetEmail - Success", func() {
+			token, err := jwxt.ParseString(jwtTokenFull)
+			So(err, ShouldBeNil)
+			audience := `https://httpbin.org/`
+			email, err := GetEmail(token, audience)
+			So(err, ShouldBeNil)
+			So(email, ShouldResemble, "bevan@bevanhunt.com")
+		})
+
+		Convey("GetURLScopes - Success", func() {
+			token, err := jwxt.ParseString(jwtTokenFull)
+			So(err, ShouldBeNil)
+			scopes, err := GetURLScopes(token)
+			So(err, ShouldBeNil)
+			scopesExp := []URLScope{
+				URLScope{
+					method: "get",
+					url:    "get",
+				},
+				URLScope{
+					method: "get",
+					url:    "users",
+				},
+			}
+			So(scopes, ShouldResemble, scopesExp)
+		})
+
+		Convey("GetURLScopes - Failure - no scopes", func() {
+			token, err := jwxt.ParseString(jwtTokenNoScopes)
+			So(err, ShouldBeNil)
+			_, err = GetURLScopes(token)
+			So(err, ShouldBeError)
+		})
+
 		Convey("GetScopes - Success", func() {
-			jwtToken := `eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6Ik1FTTNNRFEzTkRBME56RkJRME13TkVJNVFVSTVPVVkyTWpNNFJEWTRSamRDUXpKR1JrTTFOQSJ9.eyJpc3MiOiJodHRwczovL2JldmFuaHVudC5hdXRoMC5jb20vIiwic3ViIjoiZ2l0aHVifDg5MjQwNCIsImF1ZCI6WyJodHRwczovL2h0dHBiaW4ub3JnLyIsImh0dHBzOi8vYmV2YW5odW50LmF1dGgwLmNvbS91c2VyaW5mbyJdLCJpYXQiOjE1MzY2NjI4MjAsImV4cCI6MTUzNjY3MDAyMCwiYXpwIjoiWFZBSThLdWk4OW5KNE1yUnBTOExiZmJuenhnT0lLUjQiLCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIGdldDpnZXQifQ.un8WKaw9cshRHEXIlVzk4HO1BSBwoWKv_sFkS_N4youb7rX7t54WcH3zSSjuAGbIW9u8fbjhPBLRK4PF44xf-X9j3Xc0f7GRXztET7zWpQ6see9KUeRICFp0t5kppnj3E_lZZucr6c8El3IJT8wiojh3027zCEzMfIQhpDO81hF1rMbSmz188pUDXp6HlL84HvIF8OjIjDXj0H3MLBR51G4n_aKPzxI8qDGR5-xyABAmlLnbHb1xjXNwEh3tsiOREiJjGw7jx5IeHSOOvInTlBMzQ7XvTHDPYWLpRfGCJBva0lNJ_BqYbdBUd044a2GBoOuCqKnfzFPV664fg-5R-w`
-			token, err := jwxt.ParseString(jwtToken)
+			token, err := jwxt.ParseString(jwtTokenFull)
 			So(err, ShouldBeNil)
 			scopes, err := GetScopes(token)
 			So(err, ShouldBeNil)
-			scopesExp := []string{"openid", "profile", "email", "get:get"}
+			scopesExp := []string{"openid", "profile", "email", "get:get", "get:users"}
 			So(scopes, ShouldResemble, scopesExp)
 		})
 
 		Convey("GetScopes - Failure - valid token no scopes", func() {
-			jwtToken := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.TCYt5XsITJX1CxPCT8yAV-TVkIEq_PbChOMqsLfRoPsnsgw5WEuts01mq-pQy7UJiN5mgRxD-WUcX16dUEMGlv50aqzpqh4Qktb3rk-BuQy72IFLOqV0G_zS245-kronKb78cPN25DGlcTwLtjPAYuNzVBAh4vGHSrQyHUdBBPM`
-			token, err := jwxt.ParseString(jwtToken)
+			token, err := jwxt.ParseString(jwtTokenNoScopes)
 			So(err, ShouldBeNil)
 			_, err = GetScopes(token)
 			So(err, ShouldBeError)

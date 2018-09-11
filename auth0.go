@@ -3,6 +3,7 @@ package auth0
 import (
 	"errors"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/lestrrat-go/jwx/jws"
@@ -23,9 +24,9 @@ var jwkFetch = jwk.Fetch
 var jwsVerifyWithJWK = jws.VerifyWithJWK
 var jwtParseString = jwt.ParseString
 
-func validateToken(url string, jwtToken string) (*jwt.Token, error) {
+func validateToken(jwkURL string, jwtToken string) (*jwt.Token, error) {
 	// get JWKs and validate them against JWT token
-	set, err := jwkFetch(url)
+	set, err := jwkFetch(jwkURL)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +96,7 @@ func getJwtTokenNet(req *http.Request) (string, error) {
 	return verifyBearerToken(tokenParts)
 }
 
-func processToken(db *buntdb.DB, jwtToken string, audience string, url string) (*jwt.Token, error) {
+func processToken(db *buntdb.DB, jwtToken string, jwkURL string, audience string, issuer string) (*jwt.Token, error) {
 	// check if token is in db
 	err := db.View(func(tx *buntdb.Tx) error {
 		_, err := tx.Get(jwtToken)
@@ -107,7 +108,7 @@ func processToken(db *buntdb.DB, jwtToken string, audience string, url string) (
 
 	// if not then validate & verify token and save in db
 	if err != nil {
-		token, err := validateToken(url, jwtToken)
+		token, err := validateToken(jwkURL, jwtToken)
 		if err != nil {
 			return nil, err
 		}
@@ -115,6 +116,11 @@ func processToken(db *buntdb.DB, jwtToken string, audience string, url string) (
 		if token.Audience() != audience {
 			return nil, errors.New("audience is not valid")
 		}
+		// validate issuer
+		if token.Issuer() != issuer {
+			return nil, errors.New("issuer is not valid")
+		}
+
 		err = db.Update(func(tx *buntdb.Tx) error {
 			_, _, err := tx.Set(jwtToken, jwtToken, nil)
 			if err != nil {
@@ -134,39 +140,81 @@ func processToken(db *buntdb.DB, jwtToken string, audience string, url string) (
 	return token, nil
 }
 
-// GetScopes - get the scopes of the token
-func GetScopes(token *jwt.Token) ([]string, error) {
-	jsonBytes, err := token.MarshalJSON()
+// GetEmail - get email as a custom claim from the access_token
+func GetEmail(token *jwt.Token, audience string) (string, error) {
+	// have to escape the periods in the URL (gjson specific)
+	field := audience + "email"
+	field = strings.Replace(field, ".", `\.`, -1)
+	return tokenParser(token, field)
+}
+
+// URLScope - url scope type
+type URLScope struct {
+	method string
+	url    string
+}
+
+// GetURLScopes - get the URL scopes from the scopes from the token
+func GetURLScopes(token *jwt.Token) ([]URLScope, error) {
+	var urlScopes []URLScope
+	scopes, err := tokenParser(token, "scope")
 	if err != nil {
 		return nil, err
 	}
+	r := regexp.MustCompile(`(?m)([a-z]+:[a-z]+)`)
+	urlScopesArray := r.FindAllString(scopes, -1)
+	for _, urlScope := range urlScopesArray {
+		urlParts := strings.Split(urlScope, ":")
+		urlScopeObj := URLScope{
+			method: urlParts[0],
+			url:    urlParts[1],
+		}
+		urlScopes = append(urlScopes, urlScopeObj)
+	}
+	return urlScopes, nil
+}
+
+func tokenParser(token *jwt.Token, field string) (string, error) {
+	jsonBytes, err := token.MarshalJSON()
+	if err != nil {
+		return "", err
+	}
 	result := gjson.ParseBytes(jsonBytes)
-	scopesStr := result.Get("scope").String()
-	if scopesStr == "" {
-		return nil, errors.New("there are no scopes")
+	scopes := result.Get(field).String()
+	if scopes == "" {
+		return "", errors.New("there are no " + field)
+	}
+	return scopes, nil
+}
+
+// GetScopes - get the scopes of the token
+func GetScopes(token *jwt.Token) ([]string, error) {
+	scopesStr, err := tokenParser(token, "scope")
+	if err != nil {
+		return nil, err
 	}
 	scopes := strings.Split(scopesStr, " ")
 	return scopes, nil
 }
 
 // Validate - validate with JWK & JWT Auth0 & audience for fasthttp
-func Validate(db *buntdb.DB, url string, audience string, req *fasthttp.RequestCtx) (*jwt.Token, error) {
+func Validate(db *buntdb.DB, jwkURL string, audience string, issuer string, req *fasthttp.RequestCtx) (*jwt.Token, error) {
 	// extract token from header
 	jwtToken, err := getJwtToken(req)
 	if err != nil {
 		return nil, err
 	}
 	// process token
-	return processToken(db, jwtToken, audience, url)
+	return processToken(db, jwtToken, jwkURL, audience, issuer)
 }
 
 // ValidateNet - validate with JWK & JWT Auth0 & audience for net/http
-func ValidateNet(db *buntdb.DB, url string, audience string, req *http.Request) (*jwt.Token, error) {
+func ValidateNet(db *buntdb.DB, jwkURL string, audience string, issuer string, req *http.Request) (*jwt.Token, error) {
 	// extract token from header
 	jwtToken, err := getJwtTokenNet(req)
 	if err != nil {
 		return nil, err
 	}
 	// process token
-	return processToken(db, jwtToken, audience, url)
+	return processToken(db, jwtToken, jwkURL, audience, issuer)
 }
