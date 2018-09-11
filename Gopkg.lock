@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  branch = "master"
+  digest = "1:bd336ef5505b5ec83e64d621bb10b594883ffc4c05002d37bffcfe683e78d682"
+  name = "github.com/apibillme/stubby"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5f859cd6c3aff4dbc36ea3f0d0094af70e079620"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -85,14 +93,6 @@
   pruneopts = "UT"
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:3dbfe6a3038d5a3792990b79719c0d7dff4fcd8e81dabdf70743e327e1bb9e7b"
-  name = "github.com/prashantv/gostub"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "5c68b99bb08825598e70739c40603c901ee58dba"
 
 [[projects]]
   digest = "1:cc1c574c9cb5e99b123888c12b828e2d19224ab6c2244bda34647f230bf33243"
@@ -209,11 +209,11 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/apibillme/stubby",
     "github.com/gbrlsnchs/jwt",
     "github.com/lestrrat-go/jwx/jwk",
     "github.com/lestrrat-go/jwx/jws",
     "github.com/lestrrat-go/jwx/jwt",
-    "github.com/prashantv/gostub",
     "github.com/smartystreets/goconvey/convey",
     "github.com/spf13/cast",
     "github.com/tidwall/buntdb",

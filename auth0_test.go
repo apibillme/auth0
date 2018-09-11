@@ -11,8 +11,8 @@ import (
 
 	"github.com/spf13/cast"
 
+	"github.com/apibillme/stubby"
 	"github.com/gbrlsnchs/jwt"
-	"github.com/prashantv/gostub"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/tidwall/buntdb"
 	"github.com/valyala/fasthttp"
@@ -65,9 +65,9 @@ func TestSpec(t *testing.T) {
 			// stub out needed functions with success factors
 			set, err := jwk.ParseString(jwks)
 			So(err, ShouldBeNil)
-			stub1 := gostub.StubFunc(&jwkFetch, set, nil)
+			stub1 := stubby.StubFunc(&jwkFetch, set, nil)
 			defer stub1.Reset()
-			stub2 := gostub.StubFunc(&jwsVerifyWithJWK, nil, nil)
+			stub2 := stubby.StubFunc(&jwsVerifyWithJWK, nil, nil)
 			defer stub2.Reset()
 
 			// validate token
@@ -128,9 +128,9 @@ func TestSpec(t *testing.T) {
 			// stub out needed functions with success factors
 			set, err := jwk.ParseString(jwks)
 			So(err, ShouldBeNil)
-			stub1 := gostub.StubFunc(&jwkFetch, set, nil)
+			stub1 := stubby.StubFunc(&jwkFetch, set, nil)
 			defer stub1.Reset()
-			stub2 := gostub.StubFunc(&jwsVerifyWithJWK, nil, nil)
+			stub2 := stubby.StubFunc(&jwsVerifyWithJWK, nil, nil)
 			defer stub2.Reset()
 
 			// validate token
@@ -186,9 +186,9 @@ func TestSpec(t *testing.T) {
 			// stub out needed functions with success factors
 			set, err := jwk.ParseString(jwks)
 			So(err, ShouldBeNil)
-			stub1 := gostub.StubFunc(&jwkFetch, set, nil)
+			stub1 := stubby.StubFunc(&jwkFetch, set, nil)
 			defer stub1.Reset()
-			stub2 := gostub.StubFunc(&jwsVerifyWithJWK, nil, nil)
+			stub2 := stubby.StubFunc(&jwsVerifyWithJWK, nil, nil)
 			defer stub2.Reset()
 
 			_, err = Validate(db, jwkEndpoint, audience, ctx)
@@ -238,9 +238,9 @@ func TestSpec(t *testing.T) {
 			// stub out needed functions with success factors
 			set, err := jwk.ParseString(jwks)
 			So(err, ShouldBeNil)
-			stub1 := gostub.StubFunc(&jwkFetch, set, nil)
+			stub1 := stubby.StubFunc(&jwkFetch, set, nil)
 			defer stub1.Reset()
-			stub2 := gostub.StubFunc(&jwsVerifyWithJWK, nil, nil)
+			stub2 := stubby.StubFunc(&jwsVerifyWithJWK, nil, nil)
 			defer stub2.Reset()
 
 			// validate token
@@ -294,7 +294,7 @@ func TestSpec(t *testing.T) {
 		})
 
 		Convey("validateToken - failure: jwk.Fetch errors", func() {
-			stub1 := gostub.StubFunc(&jwkFetch, nil, errors.New("failure"))
+			stub1 := stubby.StubFunc(&jwkFetch, nil, errors.New("failure"))
 			defer stub1.Reset()
 			_, err := validateToken("", "")
 			So(err, ShouldBeError)
@@ -304,9 +304,9 @@ func TestSpec(t *testing.T) {
 			// stub out needed functions with success factors
 			set, err := jwk.ParseString(jwks)
 			So(err, ShouldBeNil)
-			stub1 := gostub.StubFunc(&jwkFetch, set, nil)
+			stub1 := stubby.StubFunc(&jwkFetch, set, nil)
 			defer stub1.Reset()
-			stub2 := gostub.StubFunc(&jwsVerifyWithJWK, nil, errors.New("error"))
+			stub2 := stubby.StubFunc(&jwsVerifyWithJWK, nil, errors.New("error"))
 			defer stub2.Reset()
 			_, err = validateToken("", "")
 			So(err, ShouldBeError)
