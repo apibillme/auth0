@@ -28,7 +28,8 @@ func main() {
     app.Use("/", func(ctx *fasthttp.RequestCtx, next func(error)) {
         jwkEndpoint := "https://example.auth0.com/.well-known/jwks.json"
         audience := "https://httpbin.org/"
-        _, err := auth0.Validate(db, jwkEndpoint, audience, ctx)
+        issuer := "https://example.auth0.com/"
+        _, err := auth0.Validate(db, jwkEndpoint, audience, issuer, ctx)
         if err != nil {
             ctx.SetStatusCode(401)
             ctx.SetBodyString(`{"error":"` + cast.ToString(err) + `"}`)
