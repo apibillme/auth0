@@ -23,7 +23,7 @@ func main() {
     }
     defer db.Close()
 
-    app := gorestserve.New()
+    app := restserve.New()
 
     app.Use("/", func(ctx *fasthttp.RequestCtx, next func(error)) {
         jwkEndpoint := "https://example.auth0.com/.well-known/jwks.json"
@@ -43,4 +43,4 @@ func main() {
     })
 }
 ```
-Check out [gorestserve](https://github.com/apibillme/gorestserve)
+Check out [restserve](https://github.com/apibillme/restserve)
