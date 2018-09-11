@@ -41,6 +41,10 @@
   name = "github.com/valyala/fasthttp"
   version = "20180529.0.0"
 
+[[constraint]]
+  name = "github.com/gbrlsnchs/jwt"
+  branch = "master"
+
 [prune]
   go-tests = true
   unused-packages = true

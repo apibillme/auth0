@@ -11,6 +11,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:04463a7b0b8e3aecaee2905703ff1f0c7c0f0c6ae4ca5025b5a9a446eb207f28"
+  name = "github.com/gbrlsnchs/jwt"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "0e3136f8ee76e189df2a1e00113967d9f4b24a9e"
+
+[[projects]]
+  branch = "master"
   digest = "1:f14d1b50e0075fb00177f12a96dd7addf93d1e2883c25befd17285b779549795"
   name = "github.com/gopherjs/gopherjs"
   packages = ["js"]
@@ -77,6 +85,14 @@
   pruneopts = "UT"
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:3dbfe6a3038d5a3792990b79719c0d7dff4fcd8e81dabdf70743e327e1bb9e7b"
+  name = "github.com/prashantv/gostub"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5c68b99bb08825598e70739c40603c901ee58dba"
 
 [[projects]]
   digest = "1:cc1c574c9cb5e99b123888c12b828e2d19224ab6c2244bda34647f230bf33243"
@@ -193,9 +209,11 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/gbrlsnchs/jwt",
     "github.com/lestrrat-go/jwx/jwk",
     "github.com/lestrrat-go/jwx/jws",
     "github.com/lestrrat-go/jwx/jwt",
+    "github.com/prashantv/gostub",
     "github.com/smartystreets/goconvey/convey",
     "github.com/spf13/cast",
     "github.com/tidwall/buntdb",

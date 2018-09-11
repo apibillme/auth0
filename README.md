@@ -7,7 +7,7 @@
 * Full authentication for Auth0 - or with any JWKs endpoint
 * Works with [net/http](https://golang.org/pkg/net/http/) and [fasthttp](https://github.com/valyala/fasthttp)
 * About 100 LOC
-* In-memory key (token) caching with [BuntDB](https://github.com/tidwall/buntdb)
+* In-memory key (token) caching with [BuntDB](https://github.com/tidwall/buntdb) - note: no key eviction due to the possibility of expired keys hammering your server
 
 ```bash
 go get github.com/apibillme/auth0-middleware
@@ -44,6 +44,3 @@ func main() {
 }
 ```
 Check out [gorestserve](https://github.com/apibillme/gorestserve)
-
-## TODO
-* Tests (waiting for my version of VCR)

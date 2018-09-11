@@ -1,0 +1,9 @@
+version: "{build}.{branch}"
+clone_folder: c:\test
+environment:
+  GOPATH: c:\gopath
+  GO111MODULE: on
+build: false
+deploy: false
+test_script:
+  - for %%g in (go111) do (set GOROOT=c:\%%g&& c:\%%g\bin\go.exe test -v ./... & IF ERRORLEVEL == 1 EXIT 1)

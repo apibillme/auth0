@@ -1,0 +1,13 @@
+language: go
+os:
+  - linux
+  - osx
+sudo: false
+env: "GO111MODULE=on"
+go:
+  - "1.11"
+  - "tip"
+install:
+  - "mkdir $HOME/test"
+  - "rsync -az ${TRAVIS_BUILD_DIR}/ $HOME/test/"
+  - "cd $HOME/test"

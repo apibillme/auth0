@@ -17,18 +17,27 @@ import (
 	"github.com/tidwall/buntdb"
 )
 
+// reference vars here for stubbing
+var jwkFetch = jwk.Fetch
+var jwsVerifyWithJWK = jws.VerifyWithJWK
+var jwtParseString = jwt.ParseString
+
 func validateToken(url string, jwtToken string) (*jwt.Token, error) {
 	// get JWKs and validate them against JWT token
-	set, err := jwk.Fetch(url)
+	set, err := jwkFetch(url)
 	if err != nil {
 		return nil, err
 	}
 
+	var errstrings []string
+
 	matches := 0
 	for _, key := range set.Keys {
-		_, err = jws.VerifyWithJWK([]byte(jwtToken), key)
+		_, err = jwsVerifyWithJWK([]byte(jwtToken), key)
 		if err == nil {
 			matches++
+		} else {
+			errstrings = append(errstrings, err.Error())
 		}
 	}
 
@@ -38,12 +47,12 @@ func validateToken(url string, jwtToken string) (*jwt.Token, error) {
 	}
 
 	// token is invalid
-	return nil, errors.New("token is invalid")
+	return nil, errors.New(strings.Join(errstrings, "\n"))
 }
 
 func verifyToken(jwtToken string) (*jwt.Token, error) {
 	// parse & verify claims of JWT token
-	token, err := jwt.ParseString(jwtToken)
+	token, err := jwtParseString(jwtToken)
 	if err != nil {
 		return nil, err
 	}
@@ -119,18 +128,6 @@ func processToken(db *buntdb.DB, jwtToken string, audience string, url string) (
 
 	// if so then only verify token
 	token, err := verifyToken(jwtToken)
-
-	// if token cannot be verfied then delete it from db
-	if err != nil {
-		err = db.Update(func(tx *buntdb.Tx) error {
-			_, err = tx.Delete(jwtToken)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
-		return nil, err
-	}
 
 	// if everything is good return token
 	return token, nil
