@@ -150,8 +150,8 @@ func GetEmail(token *jwt.Token, audience string) (string, error) {
 
 // URLScope - url scope type
 type URLScope struct {
-	method string
-	url    string
+	Method string
+	URL    string
 }
 
 // GetURLScopes - get the URL scopes from the scopes from the token
@@ -166,8 +166,8 @@ func GetURLScopes(token *jwt.Token) ([]URLScope, error) {
 	for _, urlScope := range urlScopesArray {
 		urlParts := strings.Split(urlScope, ":")
 		urlScopeObj := URLScope{
-			method: urlParts[0],
-			url:    urlParts[1],
+			Method: urlParts[0],
+			URL:    urlParts[1],
 		}
 		urlScopes = append(urlScopes, urlScopeObj)
 	}

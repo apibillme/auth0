@@ -361,12 +361,12 @@ func TestSpec(t *testing.T) {
 			So(err, ShouldBeNil)
 			scopesExp := []URLScope{
 				URLScope{
-					method: "get",
-					url:    "get",
+					Method: "get",
+					URL:    "get",
 				},
 				URLScope{
-					method: "get",
-					url:    "users",
+					Method: "get",
+					URL:    "users",
 				},
 			}
 			So(scopes, ShouldResemble, scopesExp)
