@@ -189,6 +189,11 @@ func (h *RequestHeader) ConnectionUpgrade() bool {
 	return hasHeaderValue(h.Peek("Connection"), strUpgrade)
 }
 
+// PeekCookie is able to returns cookie by a given key from response.
+func (h *ResponseHeader) PeekCookie(key string) []byte {
+	return peekArgStr(h.cookies, key)
+}
+
 // ContentLength returns Content-Length header value.
 //
 // It may be negative:
@@ -241,9 +246,15 @@ func (h *ResponseHeader) mustSkipContentLength() bool {
 // It may be negative:
 // -1 means Transfer-Encoding: chunked.
 func (h *RequestHeader) ContentLength() int {
-	if h.noBody() {
+	if h.ignoreBody() {
 		return 0
 	}
+	return h.realContentLength()
+}
+
+// realContentLength returns the actual Content-Length set in the request,
+// including positive lengths for GET/HEAD requests.
+func (h *RequestHeader) realContentLength() int {
 	h.parseRawHeaders()
 	return h.contentLength
 }
@@ -511,7 +522,7 @@ func (h *RequestHeader) IsGet() bool {
 	return h.isGet
 }
 
-// IsPost returns true if request methos is POST.
+// IsPost returns true if request method is POST.
 func (h *RequestHeader) IsPost() bool {
 	return bytes.Equal(h.Method(), strPost)
 }
@@ -533,6 +544,26 @@ func (h *RequestHeader) IsHead() bool {
 // IsDelete returns true if request method is DELETE.
 func (h *RequestHeader) IsDelete() bool {
 	return bytes.Equal(h.Method(), strDelete)
+}
+
+// IsConnect returns true if request method is CONNECT.
+func (h *RequestHeader) IsConnect() bool {
+	return bytes.Equal(h.Method(), strConnect)
+}
+
+// IsOptions returns true if request method is OPTIONS.
+func (h *RequestHeader) IsOptions() bool {
+	return bytes.Equal(h.Method(), strOptions)
+}
+
+// IsTrace returns true if request method is TRACE.
+func (h *RequestHeader) IsTrace() bool {
+	return bytes.Equal(h.Method(), strTrace)
+}
+
+// IsPatch returns true if request method is PATCH.
+func (h *RequestHeader) IsPatch() bool {
+	return bytes.Equal(h.Method(), strPatch)
 }
 
 // IsHTTP11 returns true if the request is HTTP/1.1.
@@ -1185,6 +1216,8 @@ func (h *ResponseHeader) peek(key []byte) []byte {
 		return peekArgBytes(h.h, key)
 	case "Content-Length":
 		return h.contentLengthBytes
+	case "Set-Cookie":
+		return appendResponseCookieBytes(nil, h.cookies)
 	default:
 		return peekArgBytes(h.h, key)
 	}
@@ -1330,9 +1363,12 @@ func (h *RequestHeader) tryRead(r *bufio.Reader, n int) error {
 	h.resetSkipNormalize()
 	b, err := r.Peek(n)
 	if len(b) == 0 {
-		// treat all errors on the first byte read as EOF
-		if n == 1 || err == io.EOF {
-			return io.EOF
+		if err == io.EOF {
+			return err
+		}
+
+		if err == nil {
+			panic("bufio.Reader.Peek() returned nil, nil")
 		}
 
 		// This is for go 1.6 bug. See https://github.com/golang/go/issues/14121 .
@@ -1431,10 +1467,9 @@ func (h *ResponseHeader) AppendBytes(dst []byte) []byte {
 	dst = append(dst, statusLine(statusCode)...)
 
 	server := h.Server()
-	if len(server) == 0 {
-		server = defaultServerName
+	if len(server) != 0 {
+		dst = appendHeaderLine(dst, strServer, server)
 	}
-	dst = appendHeaderLine(dst, strServer, server)
 	dst = appendHeaderLine(dst, strDate, serverDate.Load().([]byte))
 
 	// Append Content-Type only for non-zero responses
@@ -1524,7 +1559,7 @@ func (h *RequestHeader) AppendBytes(dst []byte) []byte {
 	}
 
 	contentType := h.ContentType()
-	if !h.noBody() {
+	if !h.ignoreBody() {
 		if len(contentType) == 0 {
 			contentType = strPostArgsContentType
 		}
@@ -1578,7 +1613,7 @@ func (h *ResponseHeader) parse(buf []byte) (int, error) {
 	return m + n, nil
 }
 
-func (h *RequestHeader) noBody() bool {
+func (h *RequestHeader) ignoreBody() bool {
 	return h.IsGet() || h.IsHead()
 }
 
@@ -1589,7 +1624,7 @@ func (h *RequestHeader) parse(buf []byte) (int, error) {
 	}
 
 	var n int
-	if !h.noBody() || h.noHTTP11 {
+	if !h.ignoreBody() || h.noHTTP11 {
 		n, err = h.parseHeaders(buf[m:])
 		if err != nil {
 			return 0, err
@@ -1837,10 +1872,6 @@ func (h *RequestHeader) parseHeaders(buf []byte) (int, error) {
 	}
 
 	if h.contentLength < 0 {
-		h.contentLengthBytes = h.contentLengthBytes[:0]
-	}
-	if h.noBody() {
-		h.contentLength = 0
 		h.contentLengthBytes = h.contentLengthBytes[:0]
 	}
 	if h.noHTTP11 && !h.connectionClose {
