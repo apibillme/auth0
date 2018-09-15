@@ -197,7 +197,7 @@ func GetScopes(token *jwt.Token) ([]string, error) {
 	return scopes, nil
 }
 
-// Validate - validate with JWK & JWT Auth0 & audience for fasthttp
+// Validate - validate with JWK & JWT Auth0 & audience & issuer for fasthttp
 func Validate(db *buntdb.DB, jwkURL string, audience string, issuer string, req *fasthttp.RequestCtx) (*jwt.Token, error) {
 	// extract token from header
 	jwtToken, err := getJwtToken(req)
@@ -208,7 +208,7 @@ func Validate(db *buntdb.DB, jwkURL string, audience string, issuer string, req 
 	return processToken(db, jwtToken, jwkURL, audience, issuer)
 }
 
-// ValidateNet - validate with JWK & JWT Auth0 & audience for net/http
+// ValidateNet - validate with JWK & JWT Auth0 & audience & issuer for net/http
 func ValidateNet(db *buntdb.DB, jwkURL string, audience string, issuer string, req *http.Request) (*jwt.Token, error) {
 	// extract token from header
 	jwtToken, err := getJwtTokenNet(req)
