@@ -8,6 +8,8 @@
 * Works with [net/http](https://golang.org/pkg/net/http/) and [fasthttp](https://github.com/valyala/fasthttp)
 * About 200 LOC
 * In-memory key (token) caching with [BuntDB](https://github.com/tidwall/buntdb) - note: no key eviction due to the possibility of expired keys hammering your server
+* Conforms to [IETF JWT Current Best Practices](https://tools.ietf.org/html/draft-ietf-oauth-jwt-bcp-02#section-3)
+
 
 ```bash
 go get github.com/apibillme/auth0-middleware
