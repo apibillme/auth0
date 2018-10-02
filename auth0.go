@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/apibillme/cache"
 	"github.com/lestrrat-go/jwx/jws"
 
 	"github.com/lestrrat-go/jwx/jwk"
@@ -15,7 +17,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/jwt"
 
-	"github.com/tidwall/buntdb"
 	"github.com/tidwall/gjson"
 )
 
@@ -70,7 +71,7 @@ func extractBearerTokenNet(req *http.Request) []string {
 	return strings.Split(bearerToken, " ")
 }
 
-func extractBearerToken(req *fasthttp.RequestCtx) []string {
+func extractBearerTokenFast(req *fasthttp.RequestCtx) []string {
 	bearerTokenBytes := req.Request.Header.Peek("Authorization")
 	bearerToken := cast.ToString(bearerTokenBytes)
 	return strings.Split(bearerToken, " ")
@@ -86,8 +87,8 @@ func verifyBearerToken(tokenParts []string) (string, error) {
 	return tokenParts[1], nil
 }
 
-func getJwtToken(req *fasthttp.RequestCtx) (string, error) {
-	tokenParts := extractBearerToken(req)
+func getJwtTokenFast(req *fasthttp.RequestCtx) (string, error) {
+	tokenParts := extractBearerTokenFast(req)
 	return verifyBearerToken(tokenParts)
 }
 
@@ -96,18 +97,12 @@ func getJwtTokenNet(req *http.Request) (string, error) {
 	return verifyBearerToken(tokenParts)
 }
 
-func processToken(db *buntdb.DB, jwtToken string, jwkURL string, audience string, issuer string) (*jwt.Token, error) {
-	// check if token is in db
-	err := db.View(func(tx *buntdb.Tx) error {
-		_, err := tx.Get(jwtToken)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+func processToken(cache cache.Cache, jwtToken string, jwkURL string, audience string, issuer string) (*jwt.Token, error) {
+	// check if token is in cache
+	_, ok := cache.Get(jwtToken)
 
 	// if not then validate & verify token and save in db
-	if err != nil {
+	if !ok {
 		token, err := validateToken(jwkURL, jwtToken)
 		if err != nil {
 			return nil, err
@@ -121,23 +116,12 @@ func processToken(db *buntdb.DB, jwtToken string, jwkURL string, audience string
 			return nil, errors.New("issuer is not valid")
 		}
 
-		err = db.Update(func(tx *buntdb.Tx) error {
-			_, _, err := tx.Set(jwtToken, jwtToken, nil)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
+		// set in cache
+		cache.Set(jwtToken, jwtToken)
 	}
 
 	// if so then only verify token
-	token, err := verifyToken(jwtToken)
-
-	// if everything is good return token
-	return token, nil
+	return verifyToken(jwtToken)
 }
 
 // GetEmail - get email as a custom claim from the access_token
@@ -197,24 +181,33 @@ func GetScopes(token *jwt.Token) ([]string, error) {
 	return scopes, nil
 }
 
-// Validate - validate with JWK & JWT Auth0 & audience & issuer for fasthttp
-func Validate(db *buntdb.DB, jwkURL string, audience string, issuer string, req *fasthttp.RequestCtx) (*jwt.Token, error) {
+// Cached - the cache for the tokens
+var Cached cache.Cache
+
+// New - set cache options - total keys at one-time and ttl in seconds
+func New(keyCapacity int, ttl int64) {
+	globalTTL := time.Duration(ttl)
+	Cached = cache.New(keyCapacity, cache.WithTTL(globalTTL*time.Second))
+}
+
+// ValidateFast - validate with JWK & JWT Auth0 & audience & issuer for fasthttp
+func ValidateFast(jwkURL string, audience string, issuer string, req *fasthttp.RequestCtx) (*jwt.Token, error) {
 	// extract token from header
-	jwtToken, err := getJwtToken(req)
+	jwtToken, err := getJwtTokenFast(req)
 	if err != nil {
 		return nil, err
 	}
 	// process token
-	return processToken(db, jwtToken, jwkURL, audience, issuer)
+	return processToken(Cached, jwtToken, jwkURL, audience, issuer)
 }
 
-// ValidateNet - validate with JWK & JWT Auth0 & audience & issuer for net/http
-func ValidateNet(db *buntdb.DB, jwkURL string, audience string, issuer string, req *http.Request) (*jwt.Token, error) {
+// Validate - validate with JWK & JWT Auth0 & audience & issuer for net/http
+func Validate(jwkURL string, audience string, issuer string, req *http.Request) (*jwt.Token, error) {
 	// extract token from header
 	jwtToken, err := getJwtTokenNet(req)
 	if err != nil {
 		return nil, err
 	}
 	// process token
-	return processToken(db, jwtToken, jwkURL, audience, issuer)
+	return processToken(Cached, jwtToken, jwkURL, audience, issuer)
 }

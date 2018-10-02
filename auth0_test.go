@@ -2,7 +2,6 @@ package auth0
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"testing"
 	"time"
@@ -15,7 +14,6 @@ import (
 	"github.com/apibillme/stubby"
 	"github.com/gbrlsnchs/jwt"
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/tidwall/buntdb"
 	"github.com/valyala/fasthttp"
 )
 
@@ -24,11 +22,7 @@ func TestSpec(t *testing.T) {
 	jwks := `{"keys":[{"alg":"RS256","kty":"RSA","use":"sig","x5c":["MIIDATCCAemgAwIBAgIJPymo9uL6RAIZMA0GCSqGSIb3DQEBCwUAMB4xHDAaBgNVBAMTE2FwaWJpbGxtZS5hdXRoMC5jb20wHhcNMTgwODExMTU1MzQ3WhcNMzIwNDE5MTU1MzQ3WjAeMRwwGgYDVQQDExNhcGliaWxsbWUuYXV0aDAuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3YWnALuhgE6pQZa8WLJZkCaBmhzgwg4jyqHlf50B6Sed3tBatFkZ3zTXt1Ic/9axylVyOyB4Bzcnsa82oLlqiLrQ5QRpgcSzcCPhDp3ZrOhimB8bSC6c01ZDMsCRxdnFGJjSk0yDIVf3MSk8UbAPtqyf71z6rwLOrGh9JF6K9ZpMiBWuKhLXGaVHYV5AfVGhEidWYXpnTezpypzWxBFc9F/sIR6sK5NerBSIRcCdEpPoPV7eOLp1SFhP9TPhiCeVJCi4mnjWGQeOl8eYK25dLad8iqxLKmIigsqs14pp/+oT08gBLF5ga6UlB76dFWUwIqIWzjGuQ2LI+G5gkUi/hQIDAQABo0IwQDAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBSPDPNbqT4Jgh9VAEyhDoiiOXECTDAOBgNVHQ8BAf8EBAMCAoQwDQYJKoZIhvcNAQELBQADggEBAGRn08+g+JPZye1yxqgmxB4SDXktn32qb3ZY238E+Km/cvX2H27oWc53Hj+VKyrGuZjniIcVRfuWMJOpQkEltfyAPR9Q1/B7vbJa7/+YWAyeO1vd6XtFnwDrRaOKZAo4CCVYSlVCSrSho/Q+nPLCOVRSXHlGxWQr9ZuqpMF8RVPNDe9bPLWQM8ceYfJq8dCFEM1QRPXM7WXwfgrht+G48JqeOrZZcTsM6GlRijzp7av4u0D0GWh6kUI/iilNIQBFifwALPI1HZQihFFUUNEVH246Im17MzBVMxWauii+fSnE/5FA7qtNkA/tlMCavIVJ76tuSydD5ww+L/hEV7v2A8I="],"n":"3YWnALuhgE6pQZa8WLJZkCaBmhzgwg4jyqHlf50B6Sed3tBatFkZ3zTXt1Ic_9axylVyOyB4Bzcnsa82oLlqiLrQ5QRpgcSzcCPhDp3ZrOhimB8bSC6c01ZDMsCRxdnFGJjSk0yDIVf3MSk8UbAPtqyf71z6rwLOrGh9JF6K9ZpMiBWuKhLXGaVHYV5AfVGhEidWYXpnTezpypzWxBFc9F_sIR6sK5NerBSIRcCdEpPoPV7eOLp1SFhP9TPhiCeVJCi4mnjWGQeOl8eYK25dLad8iqxLKmIigsqs14pp_-oT08gBLF5ga6UlB76dFWUwIqIWzjGuQ2LI-G5gkUi_hQ","e":"AQAB","kid":"RTAxQzU0MjA0NUM2NzBBQThENzA3RDBDOEVFNDY0NUEyNjc3QkJBQw","x5t":"RTAxQzU0MjA0NUM2NzBBQThENzA3RDBDOEVFNDY0NUEyNjc3QkJBQw"}]}`
 
 	Convey("Integration Tests", t, func() {
-		db, err := buntdb.Open(":memory:")
-		if err != nil {
-			log.Panic(err)
-		}
-		defer db.Close()
+		New(128, 5)
 
 		Convey("Success - fresh key on first request - fasthttp", func() {
 			// set vars
@@ -73,22 +67,16 @@ func TestSpec(t *testing.T) {
 			defer stub2.Reset()
 
 			// validate token
-			tokenDone, err := Validate(db, jwkEndpoint, audience, issuer, ctx)
+			tokenDone, err := ValidateFast(jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeNil)
 			So(tokenDone, ShouldResemble, token)
 
 			// check db for saved token
-			err = db.View(func(tx *buntdb.Tx) error {
-				_, err := tx.Get(jwtToken)
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-			So(err, ShouldBeNil)
+			_, ok := Cached.Get(jwtToken)
+			So(ok, ShouldBeTrue)
 
 			// validate again to test key caching
-			tokenDone, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
+			tokenDone, err = ValidateFast(jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeNil)
 			So(tokenDone, ShouldResemble, token)
 		})
@@ -137,7 +125,7 @@ func TestSpec(t *testing.T) {
 			defer stub2.Reset()
 
 			// validate token
-			tokenDone, err := ValidateNet(db, jwkEndpoint, audience, issuer, ctx)
+			tokenDone, err := Validate(jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeNil)
 			So(tokenDone, ShouldResemble, token)
 		})
@@ -153,7 +141,7 @@ func TestSpec(t *testing.T) {
 			ctx.Header.Add("Authorization", "Bearer")
 
 			// validate token
-			_, err = ValidateNet(db, jwkEndpoint, audience, issuer, ctx)
+			_, err = Validate(jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 		})
 
@@ -196,18 +184,12 @@ func TestSpec(t *testing.T) {
 			stub2 := stubby.StubFunc(&jwsVerifyWithJWK, nil, nil)
 			defer stub2.Reset()
 
-			_, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
+			_, err = ValidateFast(jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 
-			// check db for saved token
-			err = db.View(func(tx *buntdb.Tx) error {
-				_, err := tx.Get(jwtToken)
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-			So(err, ShouldBeError)
+			// check cache for saved token
+			_, ok := Cached.Get(jwtToken)
+			So(ok, ShouldBeFalse)
 		})
 
 		Convey("Failure - audience does not match", func() {
@@ -250,7 +232,7 @@ func TestSpec(t *testing.T) {
 			defer stub2.Reset()
 
 			// validate token
-			_, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
+			_, err = ValidateFast(jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 		})
 
@@ -294,7 +276,7 @@ func TestSpec(t *testing.T) {
 			defer stub2.Reset()
 
 			// validate token
-			_, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
+			_, err = ValidateFast(jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 		})
 
@@ -308,7 +290,7 @@ func TestSpec(t *testing.T) {
 			ctx.Request.Header.Add("Authorization", "Bearer")
 
 			// validate token
-			_, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
+			_, err := ValidateFast(jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 		})
 
@@ -322,7 +304,7 @@ func TestSpec(t *testing.T) {
 			ctx.Request.Header.Add("Authorization", "Foobar 123")
 
 			// validate token
-			_, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
+			_, err := ValidateFast(jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 		})
 
@@ -335,7 +317,7 @@ func TestSpec(t *testing.T) {
 			ctx := &fasthttp.RequestCtx{}
 
 			// validate token
-			_, err = Validate(db, jwkEndpoint, audience, issuer, ctx)
+			_, err := ValidateFast(jwkEndpoint, audience, issuer, ctx)
 			So(err, ShouldBeError)
 		})
 	})
