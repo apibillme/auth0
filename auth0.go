@@ -145,7 +145,7 @@ func GetURLScopes(token *jwt.Token) ([]URLScope, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := regexp.MustCompile(`(?m)([a-z]+:[a-z]+)`)
+	r := regexp.MustCompile(`(?m)(\S+:\S+)`)
 	urlScopesArray := r.FindAllString(scopes, -1)
 	for _, urlScope := range urlScopesArray {
 		urlParts := strings.Split(urlScope, ":")
