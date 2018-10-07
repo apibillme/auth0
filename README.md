@@ -10,5 +10,5 @@
 * Conforms to [IETF JWT Current Best Practices](https://tools.ietf.org/html/draft-ietf-oauth-jwt-bcp-02#section-3)
 
 ```bash
-go get github.com/apibillme/auth0-middleware
+go get github.com/apibillme/auth0
 ```
